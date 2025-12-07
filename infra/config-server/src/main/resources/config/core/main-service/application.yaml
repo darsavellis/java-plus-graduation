@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6666/main-server
+    username: user
+    password: 12345
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 0
+
+hibernate:
+  show_sql: true
+  jdbc:
+    time_zone: UTC
+
+stats-server:
+  uri: http://stats-server:9090
