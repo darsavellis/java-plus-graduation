@@ -16,7 +16,7 @@
     <description>Основные бизнес-сервисы приложения</description>
 
     <modules>
-        <module>main-server</module>
+        <module>main-service</module>
     </modules>
 
 </project>

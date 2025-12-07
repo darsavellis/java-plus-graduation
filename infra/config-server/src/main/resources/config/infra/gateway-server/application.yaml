@@ -1,0 +1,43 @@
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: category_route
+          uri: lb://main-service
+          predicates:
+            - Path=/categories/**
+        - id: admin_route
+          uri: lb://main-service
+          predicates:
+            - Path=/admin/**
+        - id: users_route
+          uri: lb://main-service
+          predicates:
+            - Path=/users/**
+        - id: compilations_route
+          uri: lb://main-service
+          predicates:
+            - Path=/compilations/**
+        - id: events_route
+          uri: lb://main-service
+          predicates:
+            - Path=/events/**
+        - id: stats_route
+          uri: lb://stats-server
+          predicates:
+            - Path=/stats/**
+        - id: hit_route
+          uri: lb://stats-server
+          predicates:
+            - Path=/hit/**
+server:
+  port: 8080
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    apache.kafka: WARN
+    reactor.netty.http.server: DEBUG
