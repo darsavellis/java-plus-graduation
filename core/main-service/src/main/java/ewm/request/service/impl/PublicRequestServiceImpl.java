@@ -62,8 +62,8 @@ public class PublicRequestServiceImpl implements PublicRequestService {
         if (!event.isRequestModeration() || event.getParticipantLimit() == 0) {
             request.setStatus(RequestStatus.CONFIRMED);
         }
-
-        return requestMapper.toParticipantRequestDto(requestRepository.save(request));
+        request = requestRepository.save(request);
+        return requestMapper.toParticipantRequestDto(request);
     }
 
     @Override

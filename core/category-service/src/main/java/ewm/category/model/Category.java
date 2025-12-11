@@ -11,14 +11,12 @@ import lombok.experimental.FieldDefaults;
 @Getter
 @Setter
 @ToString
-@Table(name = "categories", uniqueConstraints = {
-    @UniqueConstraint(columnNames = "name")
-})
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Table(name = "categories", uniqueConstraints = @UniqueConstraint(columnNames = "name"))
 public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
-    @Column(name = "name", length = 50, nullable = false, unique = true)
+    @Column(name = "name", length = 50, nullable = false)
     String name;
 }

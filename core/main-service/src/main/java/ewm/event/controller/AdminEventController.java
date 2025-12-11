@@ -24,7 +24,6 @@ public class AdminEventController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-
     public List<EventFullDto> getAllBy(@Validated @ModelAttribute AdminEventParam adminEventParam,
                                        @RequestParam(defaultValue = "0") int from,
                                        @RequestParam(defaultValue = "10") int size) {
@@ -35,5 +34,10 @@ public class AdminEventController {
     public EventFullDto updateBy(@PathVariable("eventId") long eventId,
                                  @Valid @RequestBody UpdateEventAdminRequest updateEventAdminRequest) {
         return adminEventService.updateBy(eventId, updateEventAdminRequest);
+    }
+
+    @GetMapping("/{categoryId}")
+    public boolean existsByCategoryId(@PathVariable("categoryId") long categoryId) {
+        return adminEventService.existsByCategoryId(categoryId);
     }
 }

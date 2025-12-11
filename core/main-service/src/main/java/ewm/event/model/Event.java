@@ -1,6 +1,5 @@
 package ewm.event.model;
 
-import ewm.category.model.Category;
 import ewm.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -10,8 +9,6 @@ import lombok.ToString;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -27,11 +24,8 @@ public class Event {
     Long id;
     @Column(name = "annotation", length = 2000, nullable = false)
     String annotation;
-    @Fetch(FetchMode.JOIN)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @OnDelete(action = OnDeleteAction.RESTRICT)
-    @JoinColumn(name = "category_id", nullable = false)
-    Category category;
+    @Column(name = "category_id")
+    Long categoryId;
     @Column(name = "created_on")
     LocalDateTime createdOn = LocalDateTime.now();
     @Column(name = "description", length = 7000)

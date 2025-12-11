@@ -1,7 +1,7 @@
 spring:
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:6666/main-server
+    url: jdbc:postgresql://localhost:6677/user-server
     username: user
     password: 12345
   jpa:
@@ -18,9 +18,3 @@ hibernate:
   show_sql: true
   jdbc:
     time_zone: UTC
-
-stats-server:
-  uri: http://stats-server:9090
-
-category-service:
-  uri: http://category-service

@@ -1,10 +1,10 @@
 package ewm.category.service.impl;
 
 import ewm.category.dto.CategoryDto;
+import ewm.category.exception.NotFoundException;
 import ewm.category.mapper.CategoryMapper;
 import ewm.category.repository.CategoryRepository;
 import ewm.category.service.PublicCategoryService;
-import ewm.exception.NotFoundException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;

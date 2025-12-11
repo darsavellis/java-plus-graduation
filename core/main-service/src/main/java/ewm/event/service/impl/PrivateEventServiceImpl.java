@@ -2,11 +2,9 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.category.mapper.CategoryMapper;
-import ewm.category.model.Category;
-import ewm.category.model.QCategory;
-import ewm.category.service.PublicCategoryService;
+import ewm.client.CategoryClient;
 import ewm.client.StatRestClientImpl;
+import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
@@ -36,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,10 +43,9 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PrivateEventServiceImpl implements PrivateEventService {
     final UserService userService;
-    final PublicCategoryService categoryService;
+    final CategoryClient categoryClient;
     final EventRepository eventRepository;
     final UserMapper userMapper;
-    final CategoryMapper categoryMapper;
     final EventMapper eventMapper;
     final StatRestClientImpl statRestClient;
     final JPAQueryFactory jpaQueryFactory;
@@ -55,8 +53,9 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Override
     public List<EventShortDto> getAllBy(long userId, Pageable pageRequest) {
         BooleanExpression booleanExpression = QEvent.event.initiator.id.eq(userId);
-        List<EventShortDto> events = getEvents(pageRequest, booleanExpression);
-        List<Long> eventIds = events.stream().map(EventShortDto::getId).toList();
+
+        List<Event> events = getEvents(pageRequest, booleanExpression);
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequestsMap(eventIds);
 
         Set<String> uris = events.stream()
@@ -64,7 +63,7 @@ public class PrivateEventServiceImpl implements PrivateEventService {
 
         LocalDateTime start = events
             .stream()
-            .min(Comparator.comparing(EventShortDto::getEventDate))
+            .min(Comparator.comparing(Event::getEventDate))
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
@@ -72,9 +71,15 @@ public class PrivateEventServiceImpl implements PrivateEventService {
             .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
             .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
 
-        return events.stream().peek(shortDto -> {
+        List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
+        Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
+            .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
+
+        return events.stream().map(event -> {
+            EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
             shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
+            return shortDto;
         }).toList();
     }
 
@@ -82,16 +87,19 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Transactional
     public EventFullDto create(long userId, NewEventDto newEventDto) {
         User initiator = userMapper.toUser(userService.findBy(userId));
-        Category category = categoryMapper.toCategory(categoryService.getBy(newEventDto.getCategory()));
-        Event event = eventMapper.toEvent(newEventDto, initiator, category);
-        eventRepository.save(event);
-        return eventMapper.toEventFullDto(event);
+        CategoryDto categoryDto = categoryClient.findBy(newEventDto.getCategory());
+        Event event = eventMapper.toEvent(newEventDto, initiator, categoryDto);
+        event = eventRepository.save(event);
+        return eventMapper.toEventFullDto(event, categoryDto);
     }
 
     @Override
     public EventFullDto getBy(long userId, long eventId) {
-        EventFullDto eventFullDto = eventRepository.findById(eventId).map(eventMapper::toEventFullDto)
+        Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Событие не найдено"));
+        CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
+        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto);
+
         if (eventFullDto.getInitiator().getId() != userId) {
             throw new PermissionException("Доступ запрещен");
         }
@@ -109,8 +117,8 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         if (event.getState().equals(EventState.PUBLISHED)) {
             throw new ConflictException("Нельзя отменить событие с состоянием");
         }
-        Category category = categoryMapper.toCategory(categoryService.getBy(event.getCategory().getId()));
-        return eventMapper.toEventFullDto(eventMapper.toUpdatedEvent(event, updateEventUserRequest, category));
+        CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
+        return eventMapper.toEventFullDto(eventMapper.toUpdatedEvent(event, updateEventUserRequest, categoryDto), categoryDto);
     }
 
     Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
@@ -129,18 +137,15 @@ public class PrivateEventServiceImpl implements PrivateEventService {
             );
     }
 
-    List<EventShortDto> getEvents(Pageable pageRequest, BooleanExpression eventQueryExpression) {
+    List<Event> getEvents(Pageable pageRequest, BooleanExpression eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.category, QCategory.category)
-            .fetchJoin()
             .leftJoin(QEvent.event.initiator, QUser.user)
             .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())
             .stream()
-            .map(eventMapper::toEventShortDto)
             .toList();
     }
 }

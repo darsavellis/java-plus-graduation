@@ -1,7 +1,6 @@
 package ewm.event.mappers;
 
-import ewm.category.mapper.CategoryMapper;
-import ewm.category.model.Category;
+import ewm.dto.CategoryDto;
 import ewm.event.dto.*;
 import ewm.event.model.Event;
 import ewm.user.mappers.UserMapper;
@@ -11,34 +10,38 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
-@Mapper(componentModel = "spring", uses = {CategoryMapper.class, UserMapper.class, StateActionMapper.class},
+@Mapper(componentModel = "spring", uses = {UserMapper.class, StateActionMapper.class},
     nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface EventMapper {
-    @Mapping(target = "category", source = "category")
+    @Mapping(target = "categoryId", source = "categoryDto.id")
     @Mapping(target = "initiator", source = "initiator")
     @Mapping(target = "id", ignore = true)
-    Event toEvent(NewEventDto newEventDto, User initiator, Category category);
+    Event toEvent(NewEventDto newEventDto, User initiator, CategoryDto categoryDto);
 
     @Mapping(target = "confirmedRequests", ignore = true)
-    EventFullDto toEventFullDto(Event event);
+    @Mapping(target = "id", source = "event.id")
+    @Mapping(target = "category", source = "categoryDto")
+    EventFullDto toEventFullDto(Event event, CategoryDto categoryDto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "initiator", ignore = true)
     @Mapping(target = "publishedOn", ignore = true)
-    @Mapping(target = "category", source = "category")
+    @Mapping(target = "categoryId", source = "categoryDto.id")
     @Mapping(target = "state", source = "updateEventUserRequest.stateAction")
-    Event toUpdatedEvent(@MappingTarget Event event, UpdateEventUserRequest updateEventUserRequest, Category category);
+    Event toUpdatedEvent(@MappingTarget Event event, UpdateEventUserRequest updateEventUserRequest, CategoryDto categoryDto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdOn", ignore = true)
     @Mapping(target = "initiator", ignore = true)
     @Mapping(target = "publishedOn", ignore = true)
-    @Mapping(target = "category", source = "category")
+    @Mapping(target = "categoryId", source = "categoryDto.id")
     @Mapping(target = "state", source = "updateEventAdminRequest.stateAction")
-    Event toUpdatedEvent(@MappingTarget Event event, UpdateEventAdminRequest updateEventAdminRequest, Category category);
+    Event toUpdatedEvent(@MappingTarget Event event, UpdateEventAdminRequest updateEventAdminRequest, CategoryDto categoryDto);
 
     @Mapping(target = "views", ignore = true)
+    @Mapping(target = "id", source = "event.id")
     @Mapping(target = "confirmedRequests", ignore = true)
-    EventShortDto toEventShortDto(Event event);
+    @Mapping(target = "category", source = "categoryDto")
+    EventShortDto toEventShortDto(Event event, CategoryDto categoryDto);
 }

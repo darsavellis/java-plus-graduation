@@ -10,6 +10,8 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/admin/categories")
@@ -33,5 +35,10 @@ public class AdminCategoryController {
     public CategoryDto updateBy(@PathVariable("catId") long catId,
                                 @Valid @RequestBody NewCategoryDto newCategoryDto) {
         return serviceAdmin.updateBy(catId, newCategoryDto);
+    }
+
+    @GetMapping
+    public List<CategoryDto> findAllByIds(@RequestParam(name = "ids", required = true) List<Long> categoryIds) {
+        return serviceAdmin.findAllByIds(categoryIds);
     }
 }

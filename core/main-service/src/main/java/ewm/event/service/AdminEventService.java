@@ -11,4 +11,6 @@ public interface AdminEventService {
     List<EventFullDto> getAllBy(AdminEventParam eventParam, Pageable pageRequest);
 
     EventFullDto updateBy(long eventId, UpdateEventAdminRequest updateEventAdminRequest);
+
+    boolean existsByCategoryId(long categoryId);
 }

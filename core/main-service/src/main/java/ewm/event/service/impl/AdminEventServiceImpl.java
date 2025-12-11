@@ -2,9 +2,9 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.category.model.Category;
-import ewm.category.model.QCategory;
+import ewm.client.CategoryClient;
 import ewm.client.StatRestClient;
+import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.AdminEventParam;
 import ewm.event.dto.EventFullDto;
@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,13 +41,14 @@ public class AdminEventServiceImpl implements AdminEventService {
     final EventMapper eventMapper;
     final JPAQueryFactory jpaQueryFactory;
     final StatRestClient statRestClient;
+    final CategoryClient categoryClient;
 
     @Override
     public List<EventFullDto> getAllBy(AdminEventParam eventParam, Pageable pageRequest) {
         BooleanBuilder eventQueryExpression = buildBooleanExpression(eventParam);
 
-        List<EventFullDto> events = getEvents(pageRequest, eventQueryExpression);
-        List<Long> eventIds = events.stream().map(EventFullDto::getId).toList();
+        List<Event> events = getEvents(pageRequest, eventQueryExpression);
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequestsMap(eventIds);
 
         Set<String> uris = events.stream()
@@ -54,7 +56,7 @@ public class AdminEventServiceImpl implements AdminEventService {
 
         LocalDateTime start = events
             .stream()
-            .min(Comparator.comparing(EventFullDto::getEventDate))
+            .min(Comparator.comparing(Event::getEventDate))
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
@@ -62,10 +64,17 @@ public class AdminEventServiceImpl implements AdminEventService {
             .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
             .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
 
-        return events.stream().peek(shortDto -> {
-            shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
-            shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
+        List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
+        Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
+            .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
+
+        return events.stream().map(event -> {
+            EventFullDto fullDto = eventMapper.toEventFullDto(event, categoryDtoMap.get(event.getCategoryId()));
+            fullDto.setViews(viewMap.getOrDefault("/events/" + fullDto.getId(), 0L));
+            fullDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(fullDto.getId(), 0L));
+            return fullDto;
         }).toList();
+
     }
 
     @Override
@@ -81,9 +90,14 @@ public class AdminEventServiceImpl implements AdminEventService {
             throw new ConflictException("Нельзя опубликовать отмененное событие");
         }
 
-        Category category = event.getCategory();
-        eventRepository.save(eventMapper.toUpdatedEvent(event, updateEventUserRequest, category));
-        return eventMapper.toEventFullDto(event);
+        CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
+        event = eventRepository.save(eventMapper.toUpdatedEvent(event, updateEventUserRequest, categoryDto));
+        return eventMapper.toEventFullDto(event, categoryDto);
+    }
+
+    @Override
+    public boolean existsByCategoryId(long categoryId) {
+        return eventRepository.existsByCategoryId(categoryId);
     }
 
     Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
@@ -101,18 +115,15 @@ public class AdminEventServiceImpl implements AdminEventService {
             );
     }
 
-    List<EventFullDto> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
+    List<Event> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.category, QCategory.category)
-            .fetchJoin()
             .leftJoin(QEvent.event.initiator, QUser.user)
             .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())
             .stream()
-            .map(eventMapper::toEventFullDto)
             .toList();
     }
 
@@ -125,7 +136,7 @@ public class AdminEventServiceImpl implements AdminEventService {
         Optional.ofNullable(eventParam.getStates())
             .ifPresent(userStates -> eventQueryExpression.and(qEvent.state.in(userStates)));
         Optional.ofNullable(eventParam.getCategories())
-            .ifPresent(categoryIds -> eventQueryExpression.and(qEvent.category.id.in(categoryIds)));
+            .ifPresent(categoryIds -> eventQueryExpression.and(qEvent.categoryId.in(categoryIds)));
         Optional.ofNullable(eventParam.getRangeStart())
             .ifPresent(rangeStart -> eventQueryExpression.and(qEvent.eventDate.after(rangeStart)));
         Optional.ofNullable(eventParam.getRangeEnd())

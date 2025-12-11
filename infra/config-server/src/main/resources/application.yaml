@@ -7,7 +7,7 @@ spring:
     config:
       server:
         native:
-          searchLocations:
+          search-locations:
             - classpath:config/core/{application}/
             - classpath:config/{application}/
             - classpath:config/infra/{application}/

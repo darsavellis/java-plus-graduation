@@ -2,13 +2,15 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.category.model.QCategory;
+import ewm.client.CategoryClient;
 import ewm.client.StatRestClientImpl;
+import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.PublicEventParam;
 import ewm.event.mappers.EventMapper;
+import ewm.event.model.Event;
 import ewm.event.model.EventState;
 import ewm.event.model.QEvent;
 import ewm.event.repository.EventRepository;
@@ -27,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,12 +42,14 @@ public class PublicEventServiceImpl implements PublicEventService {
     final StatRestClientImpl statRestClient;
     final EventMapper eventMapper;
     final JPAQueryFactory jpaQueryFactory;
+    final CategoryClient categoryClient;
 
     @Override
     public List<EventShortDto> getAllBy(PublicEventParam eventParam, Pageable pageRequest) {
         BooleanBuilder eventQueryExpression = buildExpression(eventParam);
-        List<EventShortDto> events = getEvents(pageRequest, eventQueryExpression);
-        List<Long> eventIds = events.stream().map(EventShortDto::getId).toList();
+
+        List<Event> events = getEvents(pageRequest, eventQueryExpression);
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = getConfirmedRequestsMap(eventIds);
 
         Set<String> uris = events.stream()
@@ -52,7 +57,7 @@ public class PublicEventServiceImpl implements PublicEventService {
 
         LocalDateTime start = events
             .stream()
-            .min(Comparator.comparing(EventShortDto::getEventDate))
+            .min(Comparator.comparing(Event::getEventDate))
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
@@ -60,16 +65,24 @@ public class PublicEventServiceImpl implements PublicEventService {
             .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
             .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
 
-        return events.stream().peek(shortDto -> {
+        List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
+        Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
+            .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
+
+        return events.stream().map(event -> {
+            EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
             shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
+            return shortDto;
         }).toList();
     }
 
     @Override
     public EventFullDto getBy(long eventId) {
-        EventFullDto event = eventRepository.findById(eventId).map(eventMapper::toEventFullDto)
+        Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Мероприятие с Id =" + eventId + " не найдено"));
+        CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
+        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto);
 
         if (!event.getState().equals(EventState.PUBLISHED)) {
             throw new NotFoundException("Событие id = " + eventId + " не опубликовано");
@@ -79,11 +92,11 @@ public class PublicEventServiceImpl implements PublicEventService {
         LocalDateTime start = now.minusYears(10);
 
         statRestClient.stats(start, now, List.of("/events/" + eventId), true)
-            .forEach(viewStatsDto -> event.setViews(viewStatsDto.getHits()));
+            .forEach(viewStatsDto -> eventFullDto.setViews(viewStatsDto.getHits()));
 
         long confirmedRequests = requestRepository.countAllByEventIdAndStatusIs(eventId, RequestStatus.CONFIRMED);
-        event.setConfirmedRequests(confirmedRequests);
-        return event;
+        eventFullDto.setConfirmedRequests(confirmedRequests);
+        return eventFullDto;
     }
 
     Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
@@ -102,18 +115,15 @@ public class PublicEventServiceImpl implements PublicEventService {
             );
     }
 
-    List<EventShortDto> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
+    List<Event> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.category, QCategory.category)
-            .fetchJoin()
             .leftJoin(QEvent.event.initiator, QUser.user)
             .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())
             .stream()
-            .map(eventMapper::toEventShortDto)
             .toList();
     }
 
@@ -129,7 +139,7 @@ public class PublicEventServiceImpl implements PublicEventService {
             .ifPresent(paid -> eventQueryExpression.and(QEvent.event.paid.eq(paid)));
         Optional.ofNullable(eventParam.getCategories())
             .filter(category -> !category.isEmpty())
-            .ifPresent(category -> eventQueryExpression.and(QEvent.event.category.id.in(category)));
+            .ifPresent(category -> eventQueryExpression.and(QEvent.event.categoryId.in(category)));
         Optional.ofNullable(eventParam.getText())
             .filter(text -> !text.isEmpty()).ifPresent(text -> {
                 eventQueryExpression.and(QEvent.event.annotation.containsIgnoreCase(text));
