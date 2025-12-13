@@ -1,7 +1,6 @@
 package ewm.request.model;
 
 import ewm.event.model.Event;
-import ewm.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -26,9 +25,8 @@ public class ParticipationRequest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id")
     Event event;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "requester_id")
-    User requester;
+    @Column(name = "requester_id")
+    Long requesterId;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 100)
     RequestStatus status = RequestStatus.PENDING;

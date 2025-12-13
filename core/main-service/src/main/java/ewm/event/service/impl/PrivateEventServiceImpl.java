@@ -2,9 +2,7 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.CategoryClient;
 import ewm.client.StatRestClientImpl;
-import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
@@ -19,12 +17,13 @@ import ewm.event.service.PrivateEventService;
 import ewm.exception.ConflictException;
 import ewm.exception.NotFoundException;
 import ewm.exception.PermissionException;
+import ewm.interaction.api.client.CategoryClient;
+import ewm.interaction.api.client.UserClient;
+import ewm.interaction.api.dto.CategoryDto;
+import ewm.interaction.api.dto.UserShortDto;
+import ewm.interaction.api.mappers.UserMapper;
 import ewm.request.model.QParticipationRequest;
 import ewm.request.model.RequestStatus;
-import ewm.user.mappers.UserMapper;
-import ewm.user.model.QUser;
-import ewm.user.model.User;
-import ewm.user.service.UserService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -42,17 +41,17 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PrivateEventServiceImpl implements PrivateEventService {
-    final UserService userService;
     final CategoryClient categoryClient;
     final EventRepository eventRepository;
     final UserMapper userMapper;
     final EventMapper eventMapper;
     final StatRestClientImpl statRestClient;
     final JPAQueryFactory jpaQueryFactory;
+    final UserClient userClient;
 
     @Override
     public List<EventShortDto> getAllBy(long userId, Pageable pageRequest) {
-        BooleanExpression booleanExpression = QEvent.event.initiator.id.eq(userId);
+        BooleanExpression booleanExpression = QEvent.event.initiatorId.eq(userId);
 
         List<Event> events = getEvents(pageRequest, booleanExpression);
         List<Long> eventIds = events.stream().map(Event::getId).toList();
@@ -86,11 +85,11 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Override
     @Transactional
     public EventFullDto create(long userId, NewEventDto newEventDto) {
-        User initiator = userMapper.toUser(userService.findBy(userId));
+        UserShortDto initiator = userMapper.toUserShortDto(userClient.findBy(userId));
         CategoryDto categoryDto = categoryClient.findBy(newEventDto.getCategory());
-        Event event = eventMapper.toEvent(newEventDto, initiator, categoryDto);
+        Event event = eventMapper.toEvent(newEventDto, initiator.getId(), categoryDto);
         event = eventRepository.save(event);
-        return eventMapper.toEventFullDto(event, categoryDto);
+        return eventMapper.toEventFullDto(event, categoryDto, initiator);
     }
 
     @Override
@@ -98,7 +97,8 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Событие не найдено"));
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
-        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto);
+        UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(userId));
+        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
 
         if (eventFullDto.getInitiator().getId() != userId) {
             throw new PermissionException("Доступ запрещен");
@@ -111,14 +111,18 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     public EventFullDto updateBy(long userId, long eventId, UpdateEventUserRequest updateEventUserRequest) {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Событие с с id = " + eventId + " не найдено"));
-        if (event.getInitiator().getId() != userId) {
+
+        if (event.getInitiatorId() != userId) {
             throw new PermissionException("Доступ запрещен");
         }
         if (event.getState().equals(EventState.PUBLISHED)) {
             throw new ConflictException("Нельзя отменить событие с состоянием");
         }
+
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
-        return eventMapper.toEventFullDto(eventMapper.toUpdatedEvent(event, updateEventUserRequest, categoryDto), categoryDto);
+        UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(userId));
+        Event updatedEvent = eventMapper.toUpdatedEvent(event, updateEventUserRequest, categoryDto);
+        return eventMapper.toEventFullDto(updatedEvent, categoryDto, userShortDto);
     }
 
     Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
@@ -140,8 +144,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     List<Event> getEvents(Pageable pageRequest, BooleanExpression eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.initiator, QUser.user)
-            .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())

@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/user-server
+    username: user
+    password: 12345
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: 0
+
+hibernate:
+  show_sql: true
+
+stats-server:
+  uri: http://stats-server:9090
+
+category-service:
+  uri: http://category-service
+
+user-service:
+  uri: http://user-service
+
+main-service:
+  uri: http://main-service

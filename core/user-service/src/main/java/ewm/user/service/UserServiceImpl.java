@@ -1,9 +1,9 @@
 package ewm.user.service;
 
 import com.querydsl.core.BooleanBuilder;
-import ewm.exception.NotFoundException;
 import ewm.user.dto.NewUserRequest;
 import ewm.user.dto.UserDto;
+import ewm.user.exception.NotFoundException;
 import ewm.user.mappers.UserMapper;
 import ewm.user.model.QUser;
 import ewm.user.model.User;

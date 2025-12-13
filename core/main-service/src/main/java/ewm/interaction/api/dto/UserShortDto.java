@@ -1,6 +1,5 @@
-package ewm.dto;
+package ewm.interaction.api.dto;
 
-import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,8 +10,7 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @ToString
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CategoryDto {
+public class UserShortDto {
     Long id;
-    @Size(min = 1, max = 50)
     String name;
 }

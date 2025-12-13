@@ -1,6 +1,6 @@
 package ewm.subscriptions.dto;
 
-import ewm.user.dto.UserShortDto;
+import ewm.interaction.api.dto.UserShortDto;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;

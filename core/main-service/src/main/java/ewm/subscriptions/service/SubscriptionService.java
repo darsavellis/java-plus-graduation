@@ -1,7 +1,7 @@
 package ewm.subscriptions.service;
 
+import ewm.interaction.api.dto.UserShortDto;
 import ewm.subscriptions.dto.SubscriptionDto;
-import ewm.user.dto.UserShortDto;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Set;

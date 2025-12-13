@@ -2,9 +2,7 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.CategoryClient;
 import ewm.client.StatRestClient;
-import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.AdminEventParam;
 import ewm.event.dto.EventFullDto;
@@ -17,9 +15,14 @@ import ewm.event.repository.EventRepository;
 import ewm.event.service.AdminEventService;
 import ewm.exception.ConflictException;
 import ewm.exception.NotFoundException;
+import ewm.interaction.api.client.CategoryClient;
+import ewm.interaction.api.client.UserClient;
+import ewm.interaction.api.dto.CategoryDto;
+import ewm.interaction.api.dto.UserDto;
+import ewm.interaction.api.dto.UserShortDto;
+import ewm.interaction.api.mappers.UserMapper;
 import ewm.request.model.QParticipationRequest;
 import ewm.request.model.RequestStatus;
-import ewm.user.model.QUser;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -39,9 +42,11 @@ import java.util.stream.Collectors;
 public class AdminEventServiceImpl implements AdminEventService {
     final EventRepository eventRepository;
     final EventMapper eventMapper;
+    final UserMapper userMapper;
     final JPAQueryFactory jpaQueryFactory;
     final StatRestClient statRestClient;
     final CategoryClient categoryClient;
+    final UserClient userClient;
 
     @Override
     public List<EventFullDto> getAllBy(AdminEventParam eventParam, Pageable pageRequest) {
@@ -68,8 +73,14 @@ public class AdminEventServiceImpl implements AdminEventService {
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
 
+        List<Long> initiators = events.stream().map(Event::getInitiatorId).toList();
+        Map<Long, UserShortDto> userShortDtoMap = userClient.findAllBy(initiators, 0, initiators.size()).stream()
+            .collect(Collectors.toMap(UserDto::getId, userMapper::toUserShortDto));
+
         return events.stream().map(event -> {
-            EventFullDto fullDto = eventMapper.toEventFullDto(event, categoryDtoMap.get(event.getCategoryId()));
+            CategoryDto categoryDto = categoryDtoMap.get(event.getCategoryId());
+            UserShortDto userShortDto = userShortDtoMap.get(event.getInitiatorId());
+            EventFullDto fullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
             fullDto.setViews(viewMap.getOrDefault("/events/" + fullDto.getId(), 0L));
             fullDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(fullDto.getId(), 0L));
             return fullDto;
@@ -91,8 +102,9 @@ public class AdminEventServiceImpl implements AdminEventService {
         }
 
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
+        UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(event.getInitiatorId()));
         event = eventRepository.save(eventMapper.toUpdatedEvent(event, updateEventUserRequest, categoryDto));
-        return eventMapper.toEventFullDto(event, categoryDto);
+        return eventMapper.toEventFullDto(event, categoryDto, userShortDto);
     }
 
     @Override
@@ -118,8 +130,6 @@ public class AdminEventServiceImpl implements AdminEventService {
     List<Event> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.initiator, QUser.user)
-            .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())
@@ -132,7 +142,7 @@ public class AdminEventServiceImpl implements AdminEventService {
 
         QEvent qEvent = QEvent.event;
         Optional.ofNullable(eventParam.getUsers())
-            .ifPresent(userIds -> eventQueryExpression.and(qEvent.initiator.id.in(userIds)));
+            .ifPresent(userIds -> eventQueryExpression.and(qEvent.initiatorId.in(userIds)));
         Optional.ofNullable(eventParam.getStates())
             .ifPresent(userStates -> eventQueryExpression.and(qEvent.state.in(userStates)));
         Optional.ofNullable(eventParam.getCategories())

@@ -1,6 +1,6 @@
-package ewm.client;
+package ewm.interaction.api.client;
 
-import ewm.dto.CategoryDto;
+import ewm.interaction.api.dto.CategoryDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

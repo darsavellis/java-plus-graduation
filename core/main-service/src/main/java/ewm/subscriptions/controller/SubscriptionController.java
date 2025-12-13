@@ -1,8 +1,8 @@
 package ewm.subscriptions.controller;
 
+import ewm.interaction.api.dto.UserShortDto;
 import ewm.subscriptions.dto.SubscriptionDto;
 import ewm.subscriptions.service.SubscriptionService;
-import ewm.user.dto.UserShortDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;

@@ -1,14 +1,11 @@
 package ewm.event.model;
 
-import ewm.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.FieldDefaults;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 
 import java.time.LocalDateTime;
 
@@ -32,10 +29,8 @@ public class Event {
     String description;
     @Column(name = "event_date", nullable = false)
     LocalDateTime eventDate;
-    @Fetch(FetchMode.JOIN)
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "initiator_id", nullable = false)
-    User initiator;
+    @Column(name = "initiator_id")
+    Long initiatorId;
     @Embedded
     Location location;
     @Column(name = "paid", nullable = false)

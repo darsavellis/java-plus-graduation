@@ -4,6 +4,7 @@ import ewm.event.model.Event;
 import ewm.event.repository.EventRepository;
 import ewm.exception.ConflictException;
 import ewm.exception.NotFoundException;
+import ewm.interaction.api.client.UserClient;
 import ewm.request.dto.EventRequestStatusUpdateRequest;
 import ewm.request.dto.EventRequestStatusUpdateResult;
 import ewm.request.dto.ParticipationRequestDto;
@@ -12,7 +13,6 @@ import ewm.request.model.ParticipationRequest;
 import ewm.request.model.RequestStatus;
 import ewm.request.repository.RequestRepository;
 import ewm.request.service.PrivateRequestService;
-import ewm.user.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -29,8 +29,8 @@ import java.util.List;
 public class PrivateRequestServiceImpl implements PrivateRequestService {
     final RequestRepository requestRepository;
     final EventRepository eventRepository;
-    final UserRepository userRepository;
     final RequestMapper requestMapper;
+    final UserClient userClient;
 
 
     @Override
@@ -42,9 +42,9 @@ public class PrivateRequestServiceImpl implements PrivateRequestService {
     @Override
     @Transactional
     public EventRequestStatusUpdateResult update(long userId, long eventId, EventRequestStatusUpdateRequest updateRequest) {
-        userRepository.findById(userId)
-            .orElseThrow(() -> new NotFoundException("Пользователь с Id = " + userId + " не найден"));
-        Event event = eventRepository.findById(eventId).filter(event1 -> event1.getInitiator().getId().equals(userId))
+//        userRepository.findById(userId)
+//            .orElseThrow(() -> new NotFoundException("Пользователь с Id = " + userId + " не найден"));
+        Event event = eventRepository.findById(eventId).filter(event1 -> event1.getInitiatorId().equals(userId))
             .orElseThrow(() -> new NotFoundException("Событие с Id = " + eventId + " не найден"));
 
         List<Long> requestsIds = updateRequest.getRequestIds();

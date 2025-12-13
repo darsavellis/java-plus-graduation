@@ -6,14 +6,14 @@ import ewm.event.repository.EventRepository;
 import ewm.exception.ConflictException;
 import ewm.exception.NotFoundException;
 import ewm.exception.PermissionException;
+import ewm.interaction.api.client.UserClient;
+import ewm.interaction.api.dto.UserDto;
 import ewm.request.dto.ParticipationRequestDto;
 import ewm.request.mapper.RequestMapper;
 import ewm.request.model.ParticipationRequest;
 import ewm.request.model.RequestStatus;
 import ewm.request.repository.RequestRepository;
 import ewm.request.service.PublicRequestService;
-import ewm.user.model.User;
-import ewm.user.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -28,9 +28,9 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PublicRequestServiceImpl implements PublicRequestService {
     final RequestRepository requestRepository;
-    final UserRepository userRepository;
     final EventRepository eventRepository;
     final RequestMapper requestMapper;
+    final UserClient userClient;
 
     @Override
     public List<ParticipationRequestDto> getSentBy(long userId) {
@@ -41,11 +41,12 @@ public class PublicRequestServiceImpl implements PublicRequestService {
     @Override
     @Transactional
     public ParticipationRequestDto send(long userId, long eventId) {
-        User requester = userRepository.findById(userId)
-            .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
+        UserDto requester = userClient.findBy(userId);
+//        User requester = userRepository.findById(userId)
+//            .orElseThrow(() -> new NotFoundException("Пользователь с id = " + userId + " не найден"));
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Событие с id = " + eventId + " не найдено"));
-        if (requester.getId().equals(event.getInitiator().getId())) {
+        if (requester.getId().equals(event.getInitiatorId())) {
             throw new ConflictException("Нельзя делать запрос на свое событие");
         }
         if (!event.getState().equals(EventState.PUBLISHED)) {
@@ -57,7 +58,7 @@ public class PublicRequestServiceImpl implements PublicRequestService {
         if (event.getParticipantLimit() != 0 && event.getParticipantLimit() == confirmedRequests) {
             throw new ConflictException("Лимит запросов исчерпан");
         }
-        ParticipationRequest request = requestMapper.toParticipationRequest(event, requester);
+        ParticipationRequest request = requestMapper.toParticipationRequest(event, requester.getId());
 
         if (!event.isRequestModeration() || event.getParticipantLimit() == 0) {
             request.setStatus(RequestStatus.CONFIRMED);
@@ -68,13 +69,13 @@ public class PublicRequestServiceImpl implements PublicRequestService {
 
     @Override
     public ParticipationRequestDto cancel(long requestId, long userId) {
-        userRepository.findById(userId)
-            .orElseThrow(() -> new NotFoundException("Requester с таким Id не найден"));
+//        userRepository.findById(userId)
+//            .orElseThrow(() -> new NotFoundException("Requester с таким Id не найден"));
 
         ParticipationRequest participationRequest = requestRepository.findById(requestId)
             .orElseThrow(() -> new NotFoundException("Запрос не найден"));
 
-        if (userId != participationRequest.getRequester().getId()) {
+        if (userId != participationRequest.getRequesterId()) {
             throw new PermissionException("Доступ запрещен. Отменять может только владелец");
         }
 

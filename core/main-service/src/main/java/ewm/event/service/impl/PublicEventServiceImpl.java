@@ -2,9 +2,7 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.CategoryClient;
 import ewm.client.StatRestClientImpl;
-import ewm.dto.CategoryDto;
 import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
@@ -16,10 +14,14 @@ import ewm.event.model.QEvent;
 import ewm.event.repository.EventRepository;
 import ewm.event.service.PublicEventService;
 import ewm.exception.NotFoundException;
+import ewm.interaction.api.client.CategoryClient;
+import ewm.interaction.api.client.UserClient;
+import ewm.interaction.api.dto.CategoryDto;
+import ewm.interaction.api.dto.UserShortDto;
+import ewm.interaction.api.mappers.UserMapper;
 import ewm.request.model.QParticipationRequest;
 import ewm.request.model.RequestStatus;
 import ewm.request.repository.RequestRepository;
-import ewm.user.model.QUser;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -41,8 +43,10 @@ public class PublicEventServiceImpl implements PublicEventService {
     final RequestRepository requestRepository;
     final StatRestClientImpl statRestClient;
     final EventMapper eventMapper;
+    final UserMapper userMapper;
     final JPAQueryFactory jpaQueryFactory;
     final CategoryClient categoryClient;
+    final UserClient userClient;
 
     @Override
     public List<EventShortDto> getAllBy(PublicEventParam eventParam, Pageable pageRequest) {
@@ -82,7 +86,8 @@ public class PublicEventServiceImpl implements PublicEventService {
         Event event = eventRepository.findById(eventId)
             .orElseThrow(() -> new NotFoundException("Мероприятие с Id =" + eventId + " не найдено"));
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
-        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto);
+        UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(event.getInitiatorId()));
+        EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
 
         if (!event.getState().equals(EventState.PUBLISHED)) {
             throw new NotFoundException("Событие id = " + eventId + " не опубликовано");
@@ -118,8 +123,6 @@ public class PublicEventServiceImpl implements PublicEventService {
     List<Event> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
         return jpaQueryFactory
             .selectFrom(QEvent.event)
-            .leftJoin(QEvent.event.initiator, QUser.user)
-            .fetchJoin()
             .where(eventQueryExpression)
             .offset(pageRequest.getOffset())
             .limit(pageRequest.getPageSize())

@@ -17,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("/admin/users")
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class UserController {
+public class
+UserController {
     final UserService userService;
 
     @PostMapping
@@ -37,5 +38,11 @@ public class UserController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteBy(@PathVariable Long userId) {
         userService.deleteBy(userId);
+    }
+
+    @GetMapping("/{userId}")
+    @ResponseStatus(HttpStatus.OK)
+    public UserDto findBy(@PathVariable Long userId) {
+        return userService.findBy(userId);
     }
 }

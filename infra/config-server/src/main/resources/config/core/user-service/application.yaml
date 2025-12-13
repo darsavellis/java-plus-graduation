@@ -10,11 +10,23 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          time_zone: UTC
 
 server:
   port: 0
 
 hibernate:
   show_sql: true
-  jdbc:
-    time_zone: UTC
+
+stats-server:
+  uri: http://stats-server:9090
+
+category-service:
+  uri: http://category-service
+
+user-service:
+  uri: http://user-service
+
+main-service:
+  uri: http://main-service

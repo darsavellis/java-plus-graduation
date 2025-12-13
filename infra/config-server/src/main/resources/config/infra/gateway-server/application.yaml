@@ -14,12 +14,13 @@ spring:
           predicates:
             - Path=/admin/categories/**
 
-        - id: users_route
+        - id: requests_route
           uri: lb://main-service
           predicates:
             - Path=/users/**
+
         - id: admin_users_route
-          uri: lb://main-service
+          uri: lb://user-service
           predicates:
             - Path=/admin/users/**
 
@@ -49,6 +50,7 @@ spring:
           uri: lb://stats-server
           predicates:
             - Path=/hit/**
+
 server:
   port: 8080
 
@@ -57,3 +59,4 @@ logging:
     org.springframework.cloud.gateway: DEBUG
     apache.kafka: WARN
     reactor.netty.http.server: DEBUG
+

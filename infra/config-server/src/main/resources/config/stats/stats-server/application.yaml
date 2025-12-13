@@ -1,7 +1,7 @@
 spring:
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:6542/statistics
+    url: jdbc:postgresql://localhost:5432/statistics
     username: user
     password: 12345
   jpa:
@@ -16,7 +16,7 @@ spring:
           time_zone: UTC
 
 server:
-  port: 0
+  port: 9090
 
 stats-server:
   uri: http://stats-server:9090

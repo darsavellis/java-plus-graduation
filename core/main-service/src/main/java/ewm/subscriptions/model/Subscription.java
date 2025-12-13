@@ -1,6 +1,5 @@
 package ewm.subscriptions.model;
 
-import ewm.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,12 +20,10 @@ public class Subscription {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "follower_id")
-    User follower;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "following_id")
-    User following;
+    @Column(name = "follower_id")
+    Long followerId;
+    @Column(name = "following_id")
+    Long followingId;
     @CreationTimestamp
     @Column(name = "created")
     LocalDateTime created;
