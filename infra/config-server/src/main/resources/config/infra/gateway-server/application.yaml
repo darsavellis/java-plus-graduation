@@ -14,10 +14,20 @@ spring:
           predicates:
             - Path=/admin/categories/**
 
-        - id: requests_route
-          uri: lb://main-service
+        - id: user_events_requests_route
+          uri: lb://request-service
           predicates:
-            - Path=/users/**
+            - Path=/users/{userId}/events/{eventId}/requests/**
+
+        - id: user_requests_route
+          uri: lb://request-service
+          predicates:
+            - Path=/users/{userId}/requests/**
+
+        - id: admin_requests_route
+          uri: lb://request-service
+          predicates:
+            - Path=/admin/requests/**
 
         - id: admin_users_route
           uri: lb://user-service
@@ -25,20 +35,25 @@ spring:
             - Path=/admin/users/**
 
         - id: events_route
-          uri: lb://main-service
+          uri: lb://event-service
           predicates:
             - Path=/events/**
         - id: admin_events_route
-          uri: lb://main-service
+          uri: lb://event-service
           predicates:
             - Path=/admin/events/**
 
+        - id: user_events_route
+          uri: lb://event-service
+          predicates:
+            - Path=/users/{userId}/events/**
+
         - id: compilations_route
-          uri: lb://main-service
+          uri: lb://event-service
           predicates:
             - Path=/compilations/**
         - id: admin_compilations_route
-          uri: lb://main-service
+          uri: lb://event-service
           predicates:
             - Path=/admin/compilations/**
 
@@ -59,4 +74,3 @@ logging:
     org.springframework.cloud.gateway: DEBUG
     apache.kafka: WARN
     reactor.netty.http.server: DEBUG
-

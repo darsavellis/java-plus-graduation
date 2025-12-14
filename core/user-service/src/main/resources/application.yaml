@@ -14,7 +14,6 @@ spring:
         enabled: true
         serviceId: config-server
 
-
 eureka:
   instance:
     preferIpAddress: false

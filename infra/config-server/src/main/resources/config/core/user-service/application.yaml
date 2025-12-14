@@ -12,6 +12,24 @@ spring:
         format_sql: true
         jdbc:
           time_zone: UTC
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          event-service:
+            connectTimeout: 5000
+            readTimeout: 5000
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 50
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60000
+        minimumNumberOfCalls: 10
 
 server:
   port: 0
@@ -28,5 +46,5 @@ category-service:
 user-service:
   uri: http://user-service
 
-main-service:
-  uri: http://main-service
+event-service:
+  uri: http://event-service

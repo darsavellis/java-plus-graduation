@@ -28,5 +28,5 @@ category-service:
 user-service:
   uri: http://user-service
 
-main-service:
-  uri: http://main-service
+event-service:
+  uri: http://event-service

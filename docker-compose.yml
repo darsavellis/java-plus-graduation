@@ -1,5 +1,4 @@
 services:
-  # Infrastructure Services
   discovery-server:
     build: ./infra/discovery-server
     container_name: discovery-server
@@ -47,7 +46,6 @@ services:
     networks:
       - microservices-network
 
-  # Database Services
   stats-db:
     image: postgres:16.1
     container_name: stats-db
@@ -116,7 +114,23 @@ services:
       interval: 5s
       retries: 10
 
-  # Statistics Service
+  request-db:
+    image: postgres:16.1
+    container_name: request-db
+    ports:
+      - "6699:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=request-server
+    networks:
+      - microservices-network
+    healthcheck:
+      test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
+      timeout: 5s
+      interval: 5s
+      retries: 10
+
   stats-server:
     build: ./stats/stats-server
     container_name: stats-server
@@ -134,7 +148,6 @@ services:
     networks:
       - microservices-network
 
-  # Core Business Services
   category-service:
     build: ./core/category-service
     container_name: category-service
@@ -169,9 +182,9 @@ services:
     networks:
       - microservices-network
 
-  main-service:
-    build: ./core/main-service
-    container_name: main-service
+  event-service:
+    build: ./core/event-service
+    container_name: event-service
     depends_on:
       main-db:
         condition: service_healthy
