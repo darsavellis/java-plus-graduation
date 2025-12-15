@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations:
+            - classpath:config/core/{application}/
+            - classpath:config/{application}/
+            - classpath:config/infra/{application}/
+            - classpath:config/stats/{application}/
+      fail-fast: true
+      retry:
+        useRandomPolicy: true
+        max-interval: 6000
+      discovery:
+        enabled: true
+        serviceId: config-server
+
+server:
+  port: 8888
+
+eureka:
+  instance:
+    preferIpAddress: false
+    hostname: config-server
+  client:
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://discovery-server:8761/eureka/

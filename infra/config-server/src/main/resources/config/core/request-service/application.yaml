@@ -1,0 +1,69 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6699/request-server
+    username: user
+    password: 12345
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          event-service:
+            connectTimeout: 5000
+            readTimeout: 5000
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 50
+        failureRateThreshold: 50
+        waitDurationInOpenState: 60000
+        minimumNumberOfCalls: 10
+
+server:
+  port: 0
+
+hibernate:
+  show_sql: true
+
+stats-server:
+  uri: http://stats-server:9090
+
+category-service:
+  uri: http://category-service
+
+user-service:
+  uri: http://user-service
+
+event-service:
+  uri: http://event-service
+
+logging:
+  level:
+    root: INFO
+    ewm: DEBUG
+    ewm.request: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.http: DEBUG
+    org.springframework.cloud:
+      gateway: DEBUG
+      feign: DEBUG
+    org.springframework.cloud.openfeign: DEBUG
+    feign: DEBUG
+    reactor.netty.http.server: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"

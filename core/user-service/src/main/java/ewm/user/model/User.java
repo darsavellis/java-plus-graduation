@@ -1,0 +1,24 @@
+package ewm.user.model;
+
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.FieldDefaults;
+
+@Entity
+@Getter
+@Setter
+@ToString
+@FieldDefaults(level = AccessLevel.PRIVATE)
+@Table(name = "users", uniqueConstraints = @UniqueConstraint(columnNames = "email"))
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
+    @Column(name = "name", length = 250, nullable = false)
+    String name;
+    @Column(name = "email", length = 254, nullable = false, unique = true)
+    String email;
+}
