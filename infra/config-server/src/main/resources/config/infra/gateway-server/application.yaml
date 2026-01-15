@@ -6,25 +6,57 @@ spring:
           enabled: true
       routes:
         - id: category_route
-          uri: lb://main-service
+          uri: lb://category-service
           predicates:
             - Path=/categories/**
-        - id: admin_route
-          uri: lb://main-service
+        - id: admin_category_route
+          uri: lb://category-service
           predicates:
-            - Path=/admin/**
-        - id: users_route
-          uri: lb://main-service
+            - Path=/admin/categories/**
+
+        - id: user_events_requests_route
+          uri: lb://request-service
           predicates:
-            - Path=/users/**
-        - id: compilations_route
-          uri: lb://main-service
+            - Path=/users/{userId}/events/{eventId}/requests/**
+
+        - id: user_requests_route
+          uri: lb://request-service
           predicates:
-            - Path=/compilations/**
+            - Path=/users/{userId}/requests/**
+
+        - id: admin_requests_route
+          uri: lb://request-service
+          predicates:
+            - Path=/admin/requests/**
+
+        - id: admin_users_route
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
+
         - id: events_route
-          uri: lb://main-service
+          uri: lb://event-service
           predicates:
             - Path=/events/**
+        - id: admin_events_route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/events/**
+
+        - id: user_events_route
+          uri: lb://event-service
+          predicates:
+            - Path=/users/{userId}/events/**
+
+        - id: compilations_route
+          uri: lb://event-service
+          predicates:
+            - Path=/compilations/**
+        - id: admin_compilations_route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/compilations/**
+
         - id: stats_route
           uri: lb://stats-server
           predicates:
@@ -33,6 +65,7 @@ spring:
           uri: lb://stats-server
           predicates:
             - Path=/hit/**
+
 server:
   port: 8080
 
