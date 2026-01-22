@@ -1,7 +1,5 @@
 package ewm.event.controller;
 
-import ewm.client.StatRestClient;
-import ewm.dto.EndpointHitDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.PublicEventParam;
@@ -25,7 +23,6 @@ import java.util.List;
 public class PublicEventController {
     final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     final PublicEventService publicEventService;
-    final StatRestClient statRestClient;
 
     @GetMapping
     List<EventShortDto> getAllBy(@Valid @ModelAttribute PublicEventParam publicEventParam,
@@ -51,7 +48,5 @@ public class PublicEventController {
 
     void addHit(String uri, String ip) {
         LocalDateTime now = LocalDateTime.now();
-        EndpointHitDto hitDto = new EndpointHitDto("main-server", uri, ip, now.format(dateTimeFormatter));
-        statRestClient.addHit(hitDto);
     }
 }

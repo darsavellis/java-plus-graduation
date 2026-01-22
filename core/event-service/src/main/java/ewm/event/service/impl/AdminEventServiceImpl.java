@@ -2,8 +2,6 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.StatRestClient;
-import ewm.dto.ViewStatsDto;
 import ewm.event.dto.AdminEventParam;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.UpdateEventAdminRequest;
@@ -43,7 +41,6 @@ public class AdminEventServiceImpl implements AdminEventService {
     final EventMapper eventMapper;
     final UserMapper userMapper;
     final JPAQueryFactory jpaQueryFactory;
-    final StatRestClient statRestClient;
     final CategoryClient categoryClient;
     final UserClient userClient;
     final RequestClient requestClient;
@@ -65,10 +62,6 @@ public class AdminEventServiceImpl implements AdminEventService {
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
-        Map<String, Long> viewMap = statRestClient
-            .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
-            .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
@@ -81,7 +74,7 @@ public class AdminEventServiceImpl implements AdminEventService {
             CategoryDto categoryDto = categoryDtoMap.get(event.getCategoryId());
             UserShortDto userShortDto = userShortDtoMap.get(event.getInitiatorId());
             EventFullDto fullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
-            fullDto.setViews(viewMap.getOrDefault("/events/" + fullDto.getId(), 0L));
+//            fullDto.setViews(viewMap.getOrDefault("/events/" + fullDto.getId(), 0L));
             fullDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(fullDto.getId(), 0L));
             return fullDto;
         }).toList();

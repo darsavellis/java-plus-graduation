@@ -2,8 +2,6 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.StatRestClientImpl;
-import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.PublicEventParam;
@@ -39,7 +37,6 @@ import java.util.stream.Collectors;
 public class PublicEventServiceImpl implements PublicEventService {
     final EventRepository eventRepository;
     final RequestClient requestClient;
-    final StatRestClientImpl statRestClient;
     final EventMapper eventMapper;
     final UserMapper userMapper;
     final JPAQueryFactory jpaQueryFactory;
@@ -63,17 +60,12 @@ public class PublicEventServiceImpl implements PublicEventService {
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
-        Map<String, Long> viewMap = statRestClient
-            .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
-            .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
 
         return events.stream().map(event -> {
             EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
-            shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
             return shortDto;
         }).toList();
@@ -94,8 +86,6 @@ public class PublicEventServiceImpl implements PublicEventService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime start = now.minusYears(10);
 
-        statRestClient.stats(start, now, List.of("/events/" + eventId), true)
-            .forEach(viewStatsDto -> eventFullDto.setViews(viewStatsDto.getHits()));
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(Collections.singletonList(eventId));
         long confirmedRequests = confirmedRequestsMap.getOrDefault(eventId, 0L);
         eventFullDto.setConfirmedRequests(confirmedRequests);

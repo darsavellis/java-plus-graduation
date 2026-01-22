@@ -2,8 +2,6 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.StatRestClientImpl;
-import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.NewEventDto;
@@ -47,7 +45,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     final EventRepository eventRepository;
     final UserMapper userMapper;
     final EventMapper eventMapper;
-    final StatRestClientImpl statRestClient;
     final JPAQueryFactory jpaQueryFactory;
     final UserClient userClient;
     final RequestClient requestClient;
@@ -69,17 +66,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
             .orElseThrow(() -> new NotFoundException("Даты не заданы"))
             .getEventDate();
 
-        Map<String, Long> viewMap = statRestClient
-            .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
-            .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
 
         return events.stream().map(event -> {
             EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
-            shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
             return shortDto;
         }).toList();
