@@ -28,11 +28,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -56,15 +53,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         List<Event> events = getEvents(pageRequest, booleanExpression);
         List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(userId, eventIds);
-
-        Set<String> uris = events.stream()
-            .map(event -> "/events/" + event.getId()).collect(Collectors.toSet());
-
-        LocalDateTime start = events
-            .stream()
-            .min(Comparator.comparing(Event::getEventDate))
-            .orElseThrow(() -> new NotFoundException("Даты не заданы"))
-            .getEventDate();
 
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
@@ -90,13 +78,13 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Override
     public EventFullDto getBy(long userId, long eventId) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Событие не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event not found"));
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
         UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(userId));
         EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
 
         if (eventFullDto.getInitiator().getId() != userId) {
-            throw new PermissionException("Доступ запрещен");
+            throw new PermissionException("Access denied");
         }
         return eventFullDto;
     }
@@ -105,13 +93,13 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Transactional
     public EventFullDto updateBy(long userId, long eventId, UpdateEventUserRequest updateEventUserRequest) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Событие с с id = " + eventId + " не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event with id = " + eventId + " not found"));
 
         if (event.getInitiatorId() != userId) {
-            throw new PermissionException("Доступ запрещен");
+            throw new PermissionException("Access denied");
         }
         if (event.getState().equals(EventState.PUBLISHED)) {
-            throw new ConflictException("Нельзя отменить событие с состоянием");
+            throw new ConflictException("Cannot cancel event with current state");
         }
 
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());

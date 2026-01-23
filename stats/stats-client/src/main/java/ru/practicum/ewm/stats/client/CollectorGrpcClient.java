@@ -19,17 +19,17 @@ public class CollectorGrpcClient {
     public void collectUserActions(long userId, long eventId, ActionType type) {
         Instant now = Instant.now();
         Timestamp ts = Timestamp.newBuilder()
-                .setSeconds(now.getEpochSecond())
-                .setNanos(now.getNano())
-                .build();
+            .setSeconds(now.getEpochSecond())
+            .setNanos(now.getNano())
+            .build();
 
         ActionTypeProto actionTypeProto = getActionTypeProto(type);
         UserActionProto userActionProto = UserActionProto.newBuilder()
-                .setUserId(userId)
-                .setEventId(eventId)
-                .setActionType(actionTypeProto)
-                .setTimestamp(ts)
-                .build();
+            .setUserId(userId)
+            .setEventId(eventId)
+            .setActionType(actionTypeProto)
+            .setTimestamp(ts)
+            .build();
         try {
             client.collectUserAction(userActionProto);
         } catch (Exception e) {

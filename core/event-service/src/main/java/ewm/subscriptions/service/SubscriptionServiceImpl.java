@@ -39,7 +39,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public Set<UserShortDto> findFollowing(long userId, Pageable page) {
-        log.info("Получение подписок текущего пользователя с id = {}", userId);
+        log.info("Getting subscriptions for current user with id = {}", userId);
         List<Long> followingIds = jpaQueryFactory
             .selectFrom(qSubscription)
             .where(qSubscription.followerId.eq(userId))
@@ -48,7 +48,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             .stream()
             .map(Subscription::getFollowingId)
             .toList();
-        log.info("Получено {} подписок для пользователя с id = {}", followingIds.size(), userId);
+        log.info("Received {} subscriptions for user with id = {}", followingIds.size(), userId);
 
         return userClient.findAllBy(followingIds, 0, followingIds.size()).stream()
             .map(userMapper::toUserShortDto).collect(Collectors.toSet());
@@ -56,7 +56,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     public Set<UserShortDto> findFollowers(long userId, Pageable page) {
-        log.info("Получение подписчиков текущего пользователя с id = {}", userId);
+        log.info("Getting followers for current user with id = {}", userId);
         List<Long> followerIds = jpaQueryFactory
             .selectFrom(qSubscription)
             .where(qSubscription.followingId.eq(userId))
@@ -65,7 +65,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             .stream()
             .map(Subscription::getFollowerId)
             .collect(Collectors.toList());
-        log.info("Получено {} подписчиков для пользователя с id = {}", followerIds.size(), userId);
+        log.info("Received {} followers for user with id = {}", followerIds.size(), userId);
 
         return userClient.findAllBy(followerIds, 0, followerIds.size()).stream()
             .map(userMapper::toUserShortDto).collect(Collectors.toSet());
@@ -74,10 +74,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     @Transactional
     public SubscriptionDto follow(long userId, long followingId) {
-        log.info("Попытка пользователя с id = {} подписаться на пользователя с id = {}", userId, followingId);
+        log.info("User with id = {} attempts to follow user with id = {}", userId, followingId);
 
         if (userId == followingId) {
-            throw new ConflictException("Пользователь с id = " + " не может подписаться сам на себя");
+            throw new ConflictException("User with id = " + userId + " cannot follow themselves");
         }
 
         UserDto follower = userClient.findBy(userId);
@@ -86,18 +86,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = subscriptionRepository.save(
             subscriptionMapper.toSubscription(new Subscription(), follower.getId(), following.getId())
         );
-        log.info("Пользователь с id = {} успешно подписался на пользователя с id = {}", userId, followingId);
+        log.info("User with id = {} successfully followed user with id = {}", userId, followingId);
         return subscriptionMapper.toSubscriptionShortDto(subscription);
     }
 
     @Override
     @Transactional
     public void unfollow(long userId, long followingId) {
-        log.info("Попытка пользователя с id = {} отписаться от пользователя с id = {}", userId, followingId);
+        log.info("User with id = {} attempts to unfollow user with id = {}", userId, followingId);
         int deleteCount = subscriptionRepository.deleteByFollowingId(followingId);
         if (deleteCount == 0) {
-            throw new ValidationException("Некорректно заданные параметры");
+            throw new ValidationException("Invalid parameters provided");
         }
-        log.info("Пользователь с id = {} успешно отписался от пользователя с id = {}", userId, followingId);
+        log.info("User with id = {} successfully unfollowed user with id = {}", userId, followingId);
     }
 }

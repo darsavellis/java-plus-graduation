@@ -35,7 +35,12 @@ public class PublicRequestController {
     }
 
     @GetMapping("/confirmed")
-    Map<Long, Long> getConfirmedRequestsMap(@PathVariable long userId, @RequestParam List<Long> eventIds) {
+    Map<Long, Long> getConfirmedRequestsMap(@RequestParam List<Long> eventIds) {
         return requestService.getConfirmedRequestsMap(eventIds);
+    }
+
+    @GetMapping("/participated/{eventId}")
+    boolean hasUserParticipated(@PathVariable long userId, @PathVariable long eventId) {
+        return requestService.hasUserParticipated(userId, eventId);
     }
 }

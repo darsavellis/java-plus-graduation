@@ -27,8 +27,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -53,15 +54,6 @@ public class AdminEventServiceImpl implements AdminEventService {
         List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(eventIds);
 
-        Set<String> uris = events.stream()
-            .map(event -> "/events/" + event.getId()).collect(Collectors.toSet());
-
-        LocalDateTime start = events
-            .stream()
-            .min(Comparator.comparing(Event::getEventDate))
-            .orElseThrow(() -> new NotFoundException("Даты не заданы"))
-            .getEventDate();
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
@@ -74,7 +66,6 @@ public class AdminEventServiceImpl implements AdminEventService {
             CategoryDto categoryDto = categoryDtoMap.get(event.getCategoryId());
             UserShortDto userShortDto = userShortDtoMap.get(event.getInitiatorId());
             EventFullDto fullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
-//            fullDto.setViews(viewMap.getOrDefault("/events/" + fullDto.getId(), 0L));
             fullDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(fullDto.getId(), 0L));
             return fullDto;
         }).toList();
@@ -85,13 +76,13 @@ public class AdminEventServiceImpl implements AdminEventService {
     @Transactional
     public EventFullDto updateBy(long eventId, UpdateEventAdminRequest updateEventUserRequest) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Событие с с id = " + eventId + " не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event with id = " + eventId + " not found"));
 
         if (event.getState().equals(EventState.PUBLISHED)) {
-            throw new ConflictException("Событие" + event.getId() + "уже опубликовано");
+            throw new ConflictException("Event " + event.getId() + " is already published");
         }
         if (event.getState().equals(EventState.CANCELED)) {
-            throw new ConflictException("Нельзя опубликовать отмененное событие");
+            throw new ConflictException("Cannot publish a canceled event");
         }
 
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());

@@ -40,7 +40,7 @@ public class RecommendationController extends RecommendationsControllerGrpc.Reco
     }
 
     void handleStreamResponse(Stream<RecommendedEventProto> stream,
-                                      StreamObserver<RecommendedEventProto> responseObserver) {
+                              StreamObserver<RecommendedEventProto> responseObserver) {
         try (Stream<RecommendedEventProto> safeStream = stream) {
             safeStream.forEach(responseObserver::onNext);
             responseObserver.onCompleted();

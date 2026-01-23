@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.client.ActionType;
+import ru.practicum.ewm.stats.client.CollectorGrpcClient;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +39,7 @@ public class PublicRequestServiceImpl implements PublicRequestService {
     final RequestMapper requestMapper;
     final UserClient userClient;
     final JPAQueryFactory jpaQueryFactory;
+    final CollectorGrpcClient collectorGrpcClient;
 
     @Override
     public List<ParticipationRequestDto> getSentBy(long userId) {
@@ -68,6 +71,9 @@ public class PublicRequestServiceImpl implements PublicRequestService {
             request.setStatus(RequestStatus.CONFIRMED);
         }
         request = requestRepository.save(request);
+
+        collectorGrpcClient.collectUserActions(userId, eventId, ActionType.ACTION_REGISTER);
+
         return requestMapper.toParticipantRequestDto(request);
     }
 
@@ -101,5 +107,10 @@ public class PublicRequestServiceImpl implements PublicRequestService {
                 tuple -> tuple.get(0, Long.class),
                 tuple -> Optional.ofNullable(tuple.get(1, Long.class)).orElse(0L))
             );
+    }
+
+    @Override
+    public boolean hasUserParticipated(long userId, long eventId) {
+        return requestRepository.existsByRequesterIdAndEventIdAndStatus(userId, eventId, RequestStatus.CONFIRMED);
     }
 }

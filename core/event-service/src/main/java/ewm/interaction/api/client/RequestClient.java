@@ -15,4 +15,7 @@ public interface RequestClient {
 
     @GetMapping("/admin/requests/confirmed")
     Map<Long, Long> getConfirmedRequestsMap(@RequestParam List<Long> eventIds);
+
+    @GetMapping("/users/{userId}/requests/participated/{eventId}")
+    boolean hasUserParticipated(@PathVariable long userId, @PathVariable long eventId);
 }

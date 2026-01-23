@@ -49,7 +49,7 @@ public class CompilationServiceImpl implements CompilationService {
     public CompilationDto getBy(Long id) {
         Optional<Compilation> compilationOptional = compilationRepository.findById(id);
         if (compilationOptional.isEmpty()) {
-            throw new NotFoundException("Подборка с id=" + id + " не найдена");
+            throw new NotFoundException("Compilation with id=" + id + " not found");
         }
         return compilationMapper.toCompilationDto(compilationOptional.get());
     }
@@ -58,7 +58,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional
     public CompilationDto add(NewCompilationDto compilationDto) {
         if (compilationDto.getTitle() == null || compilationDto.getTitle().isBlank()) {
-            throw new ValidationException("Поле title не может быть пустой или состоять из пробела");
+            throw new ValidationException("Field title cannot be empty or consist of spaces");
         }
 
         List<Event> events = eventRepository.findAllByIdIn(compilationDto.getEvents());
@@ -76,7 +76,7 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional
     public CompilationDto updateBy(long id, UpdateCompilationRequest compilationDto) {
         Compilation compilation = compilationRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Событие с id = " + id + " не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event with id = " + id + " not found"));
 
         List<Event> events = eventRepository.findAllByIdIn(compilationDto.getEvents());
         return compilationMapper.toCompilationDto(compilationRepository
