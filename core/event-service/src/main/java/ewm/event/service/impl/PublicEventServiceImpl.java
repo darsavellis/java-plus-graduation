@@ -2,8 +2,6 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.StatRestClientImpl;
-import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.PublicEventParam;
@@ -13,6 +11,7 @@ import ewm.event.model.EventState;
 import ewm.event.model.QEvent;
 import ewm.event.repository.EventRepository;
 import ewm.event.service.PublicEventService;
+import ewm.exception.BadRequestException;
 import ewm.exception.NotFoundException;
 import ewm.interaction.api.client.CategoryClient;
 import ewm.interaction.api.client.RequestClient;
@@ -26,9 +25,15 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.ewm.stats.client.ActionType;
+import ru.practicum.ewm.stats.client.AnalyzerGrpcClient;
+import ru.practicum.ewm.stats.client.CollectorGrpcClient;
+import ru.practicum.ewm.stats.grpc.RecommendedEventProto;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,12 +44,13 @@ import java.util.stream.Collectors;
 public class PublicEventServiceImpl implements PublicEventService {
     final EventRepository eventRepository;
     final RequestClient requestClient;
-    final StatRestClientImpl statRestClient;
     final EventMapper eventMapper;
     final UserMapper userMapper;
     final JPAQueryFactory jpaQueryFactory;
     final CategoryClient categoryClient;
     final UserClient userClient;
+    final CollectorGrpcClient collectorGrpcClient;
+    final AnalyzerGrpcClient analyzerGrpcClient;
 
     @Override
     public List<EventShortDto> getAllBy(PublicEventParam eventParam, Pageable pageRequest) {
@@ -54,26 +60,12 @@ public class PublicEventServiceImpl implements PublicEventService {
         List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(eventIds);
 
-        Set<String> uris = events.stream()
-            .map(event -> "/events/" + event.getId()).collect(Collectors.toSet());
-
-        LocalDateTime start = events
-            .stream()
-            .min(Comparator.comparing(Event::getEventDate))
-            .orElseThrow(() -> new NotFoundException("Даты не заданы"))
-            .getEventDate();
-
-        Map<String, Long> viewMap = statRestClient
-            .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
-            .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
 
         return events.stream().map(event -> {
             EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
-            shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
             return shortDto;
         }).toList();
@@ -82,26 +74,69 @@ public class PublicEventServiceImpl implements PublicEventService {
     @Override
     public EventFullDto getBy(long eventId) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Мероприятие с Id =" + eventId + " не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event with Id =" + eventId + " not found"));
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
         UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(event.getInitiatorId()));
         EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
 
         if (!event.getState().equals(EventState.PUBLISHED)) {
-            throw new NotFoundException("Событие id = " + eventId + " не опубликовано");
+            throw new NotFoundException("Event id = " + eventId + " is not published");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime start = now.minusYears(10);
-
-        statRestClient.stats(start, now, List.of("/events/" + eventId), true)
-            .forEach(viewStatsDto -> eventFullDto.setViews(viewStatsDto.getHits()));
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(Collections.singletonList(eventId));
         long confirmedRequests = confirmedRequestsMap.getOrDefault(eventId, 0L);
         eventFullDto.setConfirmedRequests(confirmedRequests);
         return eventFullDto;
     }
 
+    @Override
+    public EventFullDto getBy(long eventId, long userId) {
+        EventFullDto eventFullDto = getBy(eventId);
+        collectorGrpcClient.collectUserActions(userId, eventId, ActionType.ACTION_VIEW);
+        return eventFullDto;
+    }
+
+    @Override
+    public List<EventShortDto> getRecommendations(long userId) {
+        List<RecommendedEventProto> recommendedEvents = analyzerGrpcClient
+            .getRecommendationsForUser(userId, 10)
+            .toList();
+
+        Map<Long, Double> ratingMap = recommendedEvents.stream()
+            .collect(Collectors.toMap(RecommendedEventProto::getEventId, RecommendedEventProto::getScore));
+
+        List<Event> events = eventRepository.findAllByIdIn(
+            recommendedEvents.stream().map(RecommendedEventProto::getEventId).collect(Collectors.toSet()));
+
+        List<Long> eventIds = events.stream().map(Event::getId).toList();
+        Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(eventIds);
+
+        List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
+        Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
+            .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
+
+        return events.stream().map(event -> {
+            EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
+            shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
+            shortDto.setRating(ratingMap.get(shortDto.getId()));
+            return shortDto;
+        }).toList();
+    }
+
+
+    @Override
+    public void like(long userId, long eventId) {
+        if (!eventRepository.existsById(eventId)) {
+            throw new NotFoundException("Event with Id =" + eventId + " not found");
+        }
+
+        boolean hasParticipated = requestClient.hasUserParticipated(userId, eventId);
+        if (!hasParticipated) {
+            throw new BadRequestException("User can like only events they attended");
+        }
+
+        collectorGrpcClient.collectUserActions(userId, eventId, ActionType.ACTION_LIKE);
+    }
 
     List<Event> getEvents(Pageable pageRequest, BooleanBuilder eventQueryExpression) {
         return jpaQueryFactory

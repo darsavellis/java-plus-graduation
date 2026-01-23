@@ -13,4 +13,6 @@ public interface PublicRequestService {
     ParticipationRequestDto cancel(long requestId, long userId);
 
     Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds);
+
+    boolean hasUserParticipated(long userId, long eventId);
 }

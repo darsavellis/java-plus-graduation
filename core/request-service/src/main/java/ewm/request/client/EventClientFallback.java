@@ -8,6 +8,6 @@ import org.springframework.stereotype.Component;
 public class EventClientFallback implements EventClient {
     @Override
     public EventFullDto getByInternal(long eventId) {
-        throw new ConflictException("Не удалось получить событие");
+        throw new ConflictException("Failed to get event");
     }
 }

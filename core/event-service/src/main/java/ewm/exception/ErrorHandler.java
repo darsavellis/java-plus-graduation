@@ -28,8 +28,8 @@ public class ErrorHandler {
         PrintWriter printWriter = new PrintWriter(stringWriter);
         exception.printStackTrace(printWriter);
         String errors = stringWriter.toString();
-        String cause = "Ошибка при вводе значений";
-        log.info("{}: {}", cause, exception.getMessage());
+        String cause = "Invalid input values";
+        log.warn("Status 400 - {}: {}", cause, exception.getMessage(), exception);
         return ApiError.builder()
             .errors(errors)
             .message(exception.getMessage())
@@ -40,11 +40,11 @@ public class ErrorHandler {
     }
 
     @ExceptionHandler({ValidationException.class, DataAccessException.class, WrongSortMethodException.class,
-        HandlerMethodValidationException.class})
+        HandlerMethodValidationException.class, BadRequestException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiError handleValidationException(Exception exception) {
-        String cause = "Ошибка при валидации данных";
-        log.info("{}: {}", cause, exception.getMessage());
+        String cause = "Data validation error";
+        log.warn("Status 400 - {}: {}", cause, exception.getMessage(), exception);
         return ApiError.builder()
             .message(exception.getMessage())
             .reason(cause)
@@ -56,8 +56,8 @@ public class ErrorHandler {
     @ExceptionHandler({ConflictException.class, DataIntegrityViolationException.class})
     @ResponseStatus(HttpStatus.CONFLICT)
     public ApiError handleDataIntegrityViolationException(Exception exception) {
-        String cause = "Нарушение целостности данных";
-        log.info("{}: {}", cause, exception.getMessage());
+        String cause = "Data integrity violation";
+        log.warn("Status 409 - {}: {}", cause, exception.getMessage(), exception);
         return ApiError.builder()
             .message(exception.getMessage())
             .reason(cause)
@@ -69,8 +69,8 @@ public class ErrorHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiError handleNotFoundException(NotFoundException exception) {
-        String cause = "Ошибка при поиске данных";
-        log.info("{}: {}", cause, exception.getMessage());
+        String cause = "Resource not found";
+        log.warn("Status 404 - {}: {}", cause, exception.getMessage(), exception);
         return ApiError.builder()
             .message(exception.getMessage())
             .reason(cause)
@@ -86,8 +86,8 @@ public class ErrorHandler {
         PrintWriter printWriter = new PrintWriter(stringWriter);
         exception.printStackTrace(printWriter);
         String errors = stringWriter.toString();
-        String cause = "Внутренняя ошибка сервера";
-        log.info("{}: {}", cause, exception.getMessage());
+        String cause = "Internal server error";
+        log.error("Status 500 - {}: {}", cause, exception.getMessage(), exception);
         return ApiError.builder()
             .errors(errors)
             .message(exception.getMessage())

@@ -16,4 +16,9 @@ public class RequestClientFallback implements RequestClient {
     public Map<Long, Long> getConfirmedRequestsMap(List<Long> eventIds) {
         return Map.of();
     }
+
+    @Override
+    public boolean hasUserParticipated(long userId, long eventId) {
+        return false;
+    }
 }

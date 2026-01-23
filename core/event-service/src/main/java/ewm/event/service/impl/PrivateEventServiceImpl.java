@@ -2,8 +2,6 @@ package ewm.event.service.impl;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import ewm.client.StatRestClientImpl;
-import ewm.dto.ViewStatsDto;
 import ewm.event.dto.EventFullDto;
 import ewm.event.dto.EventShortDto;
 import ewm.event.dto.NewEventDto;
@@ -30,11 +28,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,7 +42,6 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     final EventRepository eventRepository;
     final UserMapper userMapper;
     final EventMapper eventMapper;
-    final StatRestClientImpl statRestClient;
     final JPAQueryFactory jpaQueryFactory;
     final UserClient userClient;
     final RequestClient requestClient;
@@ -60,26 +54,12 @@ public class PrivateEventServiceImpl implements PrivateEventService {
         List<Long> eventIds = events.stream().map(Event::getId).toList();
         Map<Long, Long> confirmedRequestsMap = requestClient.getConfirmedRequestsMap(userId, eventIds);
 
-        Set<String> uris = events.stream()
-            .map(event -> "/events/" + event.getId()).collect(Collectors.toSet());
-
-        LocalDateTime start = events
-            .stream()
-            .min(Comparator.comparing(Event::getEventDate))
-            .orElseThrow(() -> new NotFoundException("Даты не заданы"))
-            .getEventDate();
-
-        Map<String, Long> viewMap = statRestClient
-            .stats(start, LocalDateTime.now(), uris.stream().toList(), false).stream()
-            .collect(Collectors.groupingBy(ViewStatsDto::getUri, Collectors.summingLong(ViewStatsDto::getHits)));
-
         List<Long> categoryIds = events.stream().map(Event::getCategoryId).toList();
         Map<Long, CategoryDto> categoryDtoMap = categoryClient.findAllByIds(categoryIds).stream()
             .collect(Collectors.toMap(CategoryDto::getId, Function.identity()));
 
         return events.stream().map(event -> {
             EventShortDto shortDto = eventMapper.toEventShortDto(event, categoryDtoMap.get(event.getCategoryId()));
-            shortDto.setViews(viewMap.getOrDefault("/events/" + shortDto.getId(), 0L));
             shortDto.setConfirmedRequests(confirmedRequestsMap.getOrDefault(shortDto.getId(), 0L));
             return shortDto;
         }).toList();
@@ -98,13 +78,13 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Override
     public EventFullDto getBy(long userId, long eventId) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Событие не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event not found"));
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());
         UserShortDto userShortDto = userMapper.toUserShortDto(userClient.findBy(userId));
         EventFullDto eventFullDto = eventMapper.toEventFullDto(event, categoryDto, userShortDto);
 
         if (eventFullDto.getInitiator().getId() != userId) {
-            throw new PermissionException("Доступ запрещен");
+            throw new PermissionException("Access denied");
         }
         return eventFullDto;
     }
@@ -113,13 +93,13 @@ public class PrivateEventServiceImpl implements PrivateEventService {
     @Transactional
     public EventFullDto updateBy(long userId, long eventId, UpdateEventUserRequest updateEventUserRequest) {
         Event event = eventRepository.findById(eventId)
-            .orElseThrow(() -> new NotFoundException("Событие с с id = " + eventId + " не найдено"));
+            .orElseThrow(() -> new NotFoundException("Event with id = " + eventId + " not found"));
 
         if (event.getInitiatorId() != userId) {
-            throw new PermissionException("Доступ запрещен");
+            throw new PermissionException("Access denied");
         }
         if (event.getState().equals(EventState.PUBLISHED)) {
-            throw new ConflictException("Нельзя отменить событие с состоянием");
+            throw new ConflictException("Cannot cancel event with current state");
         }
 
         CategoryDto categoryDto = categoryClient.findBy(event.getCategoryId());

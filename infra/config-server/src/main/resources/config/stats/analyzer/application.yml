@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6711/postgres
+    username: user
+    password: 12345
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties.hibernate:
+      jdbc.time_zone: UTC
+      format_sql: true
+      temp.use_jdbc_metadata_defaults: false
+    hibernate.ddl-auto: update
+    show-sql: false
+  sql.init.mode: always
+
+logging:
+  level:
+    ru.yandex.practicum.telemetry.analyzer: TRACE
+    ru.yandex.practicum.kafka: TRACE
+    org:
+      springframework: INFO
+      apache.kafka: WARN
+
+grpc:
+  server:
+    port: 59092
+
+analyzer:
+  kafka:
+    common-properties:
+      bootstrap.servers: localhost:9092
+      key.deserializer: org.apache.kafka.common.serialization.LongDeserializer
+      enable.auto.commit: false
+    consumers:
+      - type: UserActionProcessor
+        properties:
+          group.id: "user-action-analyzer-consumer-group"
+          value.deserializer: ru.yandex.practicum.kafka.deserializer.UserActionDeserializer
+        poll-timeout: 100ms
+        commit-interval: 10
+        topics:
+          - stats.user-actions.v1
+      - type: SimilarityProcessor
+        properties:
+          group.id: "similarity-analyzer-consumer-group"
+          value.deserializer: ru.yandex.practicum.kafka.deserializer.EventSimilarityDeserializer
+        poll-timeout: 100ms
+        commit-interval: 100
+        topics:
+          - stats.events-similarity.v1

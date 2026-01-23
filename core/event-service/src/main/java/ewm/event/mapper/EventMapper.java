@@ -39,7 +39,7 @@ public interface EventMapper {
     @Mapping(target = "state", source = "updateEventAdminRequest.stateAction")
     Event toUpdatedEvent(@MappingTarget Event event, UpdateEventAdminRequest updateEventAdminRequest, CategoryDto categoryDto);
 
-    @Mapping(target = "views", ignore = true)
+    @Mapping(target = "rating", ignore = true)
     @Mapping(target = "id", source = "event.id")
     @Mapping(target = "confirmedRequests", ignore = true)
     @Mapping(target = "category", source = "categoryDto")

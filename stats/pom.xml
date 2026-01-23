@@ -16,8 +16,10 @@
     <description>Модуль сервиса статистики для отслеживания посещений</description>
 
     <modules>
-        <module>stats-dto</module>
+        <module>serialization</module>
+        <module>collector</module>
+        <module>analyzer</module>
+        <module>aggregator</module>
         <module>stats-client</module>
-        <module>stats-server</module>
     </modules>
 </project>

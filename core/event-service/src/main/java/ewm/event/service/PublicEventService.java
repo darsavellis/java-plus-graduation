@@ -10,5 +10,11 @@ import java.util.List;
 public interface PublicEventService {
     List<EventShortDto> getAllBy(PublicEventParam publicEventParam, Pageable pageRequest);
 
+    EventFullDto getBy(long eventId, long userId);
+
     EventFullDto getBy(long eventId);
+
+    List<EventShortDto> getRecommendations(long userId);
+
+    void like(long userId, long eventId);
 }
