@@ -1,4 +1,4 @@
-package ru.practicum.ewm.stats.analyzer.dal.mapper;
+package ru.practicum.ewm.stats.analyzer.mapper;
 
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.stats.analyzer.dal.model.EventSimilarity;

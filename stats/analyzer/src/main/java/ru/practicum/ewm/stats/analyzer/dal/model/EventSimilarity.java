@@ -17,11 +17,11 @@ import java.time.Instant;
 public class EventSimilarity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    long id;
+    Long id;
     @Column(name = "event_a")
-    long eventA;
+    Long eventA;
     @Column(name = "event_b")
-    long eventB;
+    Long eventB;
     @Column(name = "score")
     double score;
     @Column(name = "timestamp")

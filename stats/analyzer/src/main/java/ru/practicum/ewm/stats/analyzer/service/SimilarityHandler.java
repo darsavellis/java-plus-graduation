@@ -1,4 +1,4 @@
-package ru.practicum.ewm.stats.analyzer.dal.service;
+package ru.practicum.ewm.stats.analyzer.service;
 
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 

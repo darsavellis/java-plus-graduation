@@ -1,11 +1,11 @@
-package ru.practicum.ewm.stats.analyzer.dal.controller;
+package ru.practicum.ewm.stats.analyzer.controller;
 
 import io.grpc.stub.StreamObserver;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import net.devh.boot.grpc.server.service.GrpcService;
-import ru.practicum.ewm.stats.analyzer.dal.service.RecommendationService;
+import ru.practicum.ewm.stats.analyzer.service.RecommendationService;
 import ru.practicum.ewm.stats.grpc.InteractionsCountRequestProto;
 import ru.practicum.ewm.stats.grpc.RecommendedEventProto;
 import ru.practicum.ewm.stats.grpc.SimilarEventsRequestProto;
@@ -18,7 +18,6 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RecommendationController extends RecommendationsControllerGrpc.RecommendationsControllerImplBase {
-
     private final RecommendationService recommendationService;
 
     @Override
@@ -39,7 +38,7 @@ public class RecommendationController extends RecommendationsControllerGrpc.Reco
         handleStreamResponse(recommendationService.getInteractionsCount(request), responseObserver);
     }
 
-    void handleStreamResponse(Stream<RecommendedEventProto> stream,
+    private void handleStreamResponse(Stream<RecommendedEventProto> stream,
                               StreamObserver<RecommendedEventProto> responseObserver) {
         try (Stream<RecommendedEventProto> safeStream = stream) {
             safeStream.forEach(responseObserver::onNext);

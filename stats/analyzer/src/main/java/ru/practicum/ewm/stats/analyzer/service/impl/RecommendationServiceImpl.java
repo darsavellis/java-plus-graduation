@@ -1,4 +1,4 @@
-package ru.practicum.ewm.stats.analyzer.dal.service.impl;
+package ru.practicum.ewm.stats.analyzer.service.impl;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,7 @@ import ru.practicum.ewm.stats.analyzer.dal.model.EventSimilarity;
 import ru.practicum.ewm.stats.analyzer.dal.model.UserAction;
 import ru.practicum.ewm.stats.analyzer.dal.repository.EventSimilarityRepository;
 import ru.practicum.ewm.stats.analyzer.dal.repository.UserActionRepository;
-import ru.practicum.ewm.stats.analyzer.dal.service.RecommendationService;
+import ru.practicum.ewm.stats.analyzer.service.RecommendationService;
 import ru.practicum.ewm.stats.grpc.InteractionsCountRequestProto;
 import ru.practicum.ewm.stats.grpc.RecommendedEventProto;
 import ru.practicum.ewm.stats.grpc.SimilarEventsRequestProto;

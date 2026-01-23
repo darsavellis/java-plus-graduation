@@ -1,14 +1,14 @@
-package ru.practicum.ewm.stats.analyzer.dal.service.impl;
+package ru.practicum.ewm.stats.analyzer.service.impl;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.practicum.ewm.stats.analyzer.dal.mapper.EventSimilarityMapper;
+import ru.practicum.ewm.stats.analyzer.mapper.EventSimilarityMapper;
 import ru.practicum.ewm.stats.analyzer.dal.model.EventSimilarity;
 import ru.practicum.ewm.stats.analyzer.dal.repository.EventSimilarityRepository;
-import ru.practicum.ewm.stats.analyzer.dal.service.SimilarityHandler;
+import ru.practicum.ewm.stats.analyzer.service.SimilarityHandler;
 import ru.practicum.ewm.stats.avro.EventSimilarityAvro;
 
 import java.util.Optional;

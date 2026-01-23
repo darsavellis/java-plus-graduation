@@ -9,7 +9,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.errors.WakeupException;
 import org.springframework.stereotype.Component;
 import ru.practicum.ewm.stats.analyzer.config.KafkaConfig;
-import ru.practicum.ewm.stats.analyzer.dal.service.UserActionHandler;
+import ru.practicum.ewm.stats.analyzer.service.UserActionHandler;
 import ru.practicum.ewm.stats.analyzer.service.Processor;
 import ru.practicum.ewm.stats.avro.UserActionAvro;
 

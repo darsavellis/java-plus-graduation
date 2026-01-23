@@ -19,11 +19,11 @@ import java.time.Instant;
 public class UserAction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    long id;
+    Long id;
     @Column(name = "user_id")
-    long userId;
+    Long userId;
     @Column(name = "event_id")
-    long eventId;
+    Long eventId;
     @Column(name = "weight")
     double weight;
     @Column(name = "timestamp")
